@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote - Online Voting System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .event-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .event-description {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+
+        .event-meta {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .candidates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .candidate-card {
+            background: white;
+            border: 3px solid #e5e7eb;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .candidate-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .candidate-card.voted {
+            border-color: var(--success-color);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+        }
+
+        .candidate-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 1rem;
+            border: 4px solid #e5e7eb;
+        }
+
+        .candidate-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .candidate-description {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .vote-button {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .vote-button.can-vote {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .vote-button.can-vote:hover {
+            transform: scale(1.05);
+        }
+
+        .vote-button.already-voted {
+            background: var(--success-color);
+            color: white;
+            cursor: default;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1 class="header-title">Active Events</h1>
+            <div class="user-actions">
+                <span id="userName">Loading...</span>
+                <a href="results.html" class="btn btn-outline">View Results</a>
+                <a href="logout.php" class="btn btn-primary">Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="eventsContainer"></div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let userVotes = new Set();
+
+        // Check authentication
+        fetch('session_check.php')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.authenticated) {
+                    window.location.href = 'login.html';
+                } else {
+                    currentUser = data.user;
+                    document.getElementById('userName').textContent = `Welcome, ${data.user.username}`;
+
+                    // Show admin link for admins
+                    if (data.user.role === 'admin') {
+                        const adminLink = document.createElement('a');
+                        adminLink.href = 'admin_dashboard.html';
+                        adminLink.className = 'btn btn-secondary';
+                        adminLink.textContent = 'Admin Dashboard';
+                        document.querySelector('.user-actions').insertBefore(adminLink, document.querySelector('.user-actions').firstChild);
+                    }
+
+                    loadEvents();
+                }
+            });
+
+        async function loadEvents() {
+            try {
+                const response = await fetch('vote_handler.php?action=get_active_events');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayEvents(data.events);
+                    userVotes = new Set(data.user_votes || []);
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+            }
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('eventsContainer');
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="event-card">
+                        <div class="empty-state">
+                            <div class="empty-icon">🗳️</div>
+                            <h2>No Active Events</h2>
+                            <p>There are no active voting events at the moment. Check back later!</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = events.map(event => {
+                const hasVoted = userVotes.has(event.id);
+                return `
+                    <div class="event-card">
+                        <h2 class="event-title">${event.title}</h2>
+                        <p class="event-description">${event.description}</p>
+                        <div class="event-meta">
+                            <div class="meta-item">
+                                <span>📅</span>
+                                <span>Start: ${new Date(event.start_date).toLocaleString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span>⏰</span>
+                                <span>End: ${new Date(event.end_date).toLocaleString()}</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="badge badge-success">ACTIVE</span>
+                            </div>
+                        </div>
+                        ${hasVoted ? '<div class="alert alert-success">✓ You have already voted in this event</div>' : ''}
+                        <div class="candidates-grid">
+                            ${event.candidates.map(candidate => `
+                                <div class="candidate-card ${hasVoted && candidate.user_voted ? 'voted' : ''}">
+                                    <img src="${candidate.photo || 'https://via.placeholder.com/120'}" 
+                                         class="candidate-photo" alt="${candidate.name}">
+                                    <h3 class="candidate-name">${candidate.name}</h3>
+                                    <p class="candidate-description">${candidate.description}</p>
+                                    ${hasVoted
+                        ? `<button class="vote-button already-voted">
+                                            ${candidate.user_voted ? '✓ Your Vote' : 'Already Voted'}
+                                           </button>`
+                        : `<button class="vote-button can-vote" 
+                                            onclick="vote(${event.id}, ${candidate.id})">
+                                            Vote for ${candidate.name}
+                                           </button>`
+                    }
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function vote(eventId, candidateId) {
+            if (!confirm('Are you sure you want to cast your vote? This action cannot be undone.')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'cast_vote');
+            formData.append('event_id', eventId);
+            formData.append('candidate_id', candidateId);
+
+            try {
+                const response = await fetch('vote_handler.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✓ Vote cast successfully!');
+                    loadEvents(); // Reload to show updated state
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                alert('An error occurred while casting your vote. Please try again.');
+            }
+        }
+    </script>
+</body>
+
+</html>

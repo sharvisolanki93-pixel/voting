@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Online Voting System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .event-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .event-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .event-status {
+            display: inline-block;
+            margin-bottom: 1.5rem;
+        }
+
+        .total-votes {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .result-item {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            transition: transform 0.3s ease;
+        }
+
+        .result-item:hover {
+            transform: translateX(5px);
+        }
+
+        .result-item.winner {
+            border: 3px solid var(--success-color);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(255, 255, 255, 1) 100%);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-color);
+        }
+
+        .result-info {
+            flex: 1;
+        }
+
+        .result-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-description {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .result-stats {
+            text-align: right;
+        }
+
+        .vote-count {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .vote-percentage {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .winner-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1 class="header-title">Voting Results</h1>
+            <div>
+                <a href="vote.html" class="btn btn-outline">Back to Voting</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="resultsContainer"></div>
+    </div>
+
+    <script>
+        // Load all events and their results
+        loadResults();
+
+        async function loadResults() {
+            try {
+                const response = await fetch('get_results.php');
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data.events);
+                }
+            } catch (error) {
+                console.error('Error loading results:', error);
+            }
+        }
+
+        function displayResults(events) {
+            const container = document.getElementById('resultsContainer');
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <div class="event-card">
+                        <div class="empty-state">
+                            <div class="empty-icon">📊</div>
+                            <h2>No Results Available</h2>
+                            <p>There are no events with results to display yet.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = events.map(event => {
+                const totalVotes = event.results.reduce((sum, r) => sum + r.vote_count, 0);
+                const maxVotes = Math.max(...event.results.map(r => r.vote_count));
+
+                return `
+                    <div class="event-card">
+                        <h2 class="event-title">${event.title}</h2>
+                        <div class="event-status">
+                            <span class="badge badge-${event.status === 'active' ? 'success' :
+                        event.status === 'upcoming' ? 'warning' : 'primary'
+                    }">${event.status.toUpperCase()}</span>
+                        </div>
+                        <p class="total-votes">📊 Total Votes: <strong>${totalVotes}</strong></p>
+                        
+                        ${event.results.length === 0 ? `
+                            <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                <p>No votes cast yet for this event.</p>
+                            </div>
+                        ` : `
+                            <div class="results-list">
+                                ${event.results.map(result => {
+                        const percentage = totalVotes > 0 ? ((result.vote_count / totalVotes) * 100).toFixed(1) : 0;
+                        const isWinner = result.vote_count === maxVotes && totalVotes > 0;
+
+                        return `
+                                        <div class="result-item ${isWinner ? 'winner' : ''}">
+                                            <div class="result-header">
+                                                <img src="${result.photo || 'https://via.placeholder.com/80'}" 
+                                                     class="result-photo" alt="${result.name}">
+                                                <div class="result-info">
+                                                    <div class="result-name">
+                                                        ${result.name}
+                                                        ${isWinner ? '<span class="winner-badge">🏆 WINNER</span>' : ''}
+                                                    </div>
+                                                    <p class="result-description">${result.description}</p>
+                                                </div>
+                                                <div class="result-stats">
+                                                    <div class="vote-count">${result.vote_count}</div>
+                                                    <div class="vote-percentage">${percentage}%</div>
+                                                </div>
+                                            </div>
+                                            <div class="progress-bar">
+                                                <div class="progress-fill" style="width: ${percentage}%">
+                                                    ${percentage}%
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                    }).join('')}
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Auto-refresh results every 10 seconds for active events
+        setInterval(loadResults, 10000);
+    </script>
+</body>
+
+</html>
