@@ -3,10 +3,16 @@ require_once 'config.php';
 
 header('Content-Type: application/json');
 
+// Check database connection
+if (!isset($conn) || $conn->connect_error) {
+    echo json_encode(['success' => false, 'message' => 'Database connection failed. Please check config.php and ensure MySQL is running.']);
+    exit;
+}
+
 $response = ['success' => false, 'message' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? 'register';
+    $action = $_POST['action'] ?? '';
 
     if ($action === 'register') {
         // Registration logic

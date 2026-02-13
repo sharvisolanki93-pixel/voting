@@ -174,7 +174,26 @@
                     body: formData
                 });
 
-                const data = await response.json();
+                // Check if response is OK
+                if (!response.ok) {
+                    if (response.status === 405) {
+                        showMessage('Server error: 405 Method Not Allowed. This usually means you are using a static server (like VS Code Live Server). Please use a PHP server like XAMPP and access via http://localhost/.', 'error');
+                    } else {
+                        showMessage(`Server error: ${response.status} ${response.statusText}`, 'error');
+                    }
+                    return;
+                }
+
+                // Try to parse JSON
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    const text = await response.text();
+                    console.error('Response was not JSON:', text);
+                    showMessage('Server error: Invalid response format. Please check if database is set up.', 'error');
+                    return;
+                }
 
                 if (data.success) {
                     showMessage(data.message, 'success');
@@ -186,10 +205,11 @@
                         }
                     }, 1000);
                 } else {
-                    showMessage(data.message, 'error');
+                    showMessage(data.message || 'Login failed. Please try again.', 'error');
                 }
             } catch (error) {
-                showMessage('An error occurred. Please try again.', 'error');
+                console.error('Error:', error);
+                showMessage('Network error: Unable to connect to server. Please check if your server is running.', 'error');
             }
         });
 
