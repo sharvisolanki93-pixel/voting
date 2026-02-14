@@ -1,0 +1,7 @@
+{
+    "name": "project/voting-system",
+    "description": "Online Voting System for College Events",
+    "require": {
+        "php": ">=7.4"
+    }
+}

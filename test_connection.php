@@ -1,19 +1,18 @@
 <?php
 // Database Connection Test
-// Access this file at: http://localhost/project/test_connection.php
+require_once 'config.php';
 
 echo "<h2>Database Connection Test</h2>";
 
 // Test 1: Connection
 echo "<h3>1. Testing Connection...</h3>";
-$conn = new mysqli('localhost', 'root', '', 'voting_system');
-
-if ($conn->connect_error) {
-    echo "❌ <strong>Connection failed:</strong> " . $conn->connect_error . "<br>";
-    echo "<p style='color: red;'>Fix: Make sure MySQL is running and credentials in config.php are correct</p>";
+// The connection is already established in config.php
+if (!isset($conn) || $conn->connect_error) {
+    echo "❌ <strong>Connection failed:</strong> " . ($conn->connect_error ?? 'Connection object not found') . "<br>";
+    echo "<p style='color: red;'>Fix: Check your environment variables (DB_HOST, DB_USER, etc.) or config.php</p>";
     exit;
 } else {
-    echo "✅ Database connected successfully!<br><br>";
+    echo "✅ Database connected successfully! (Host: " . DB_HOST . ")<br><br>";
 }
 
 // Test 2: Check Tables

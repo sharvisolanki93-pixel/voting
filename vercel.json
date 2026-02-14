@@ -1,11 +1,11 @@
 {
   "functions": {
-    "api/*.php": {
+    "*.php": {
       "runtime": "vercel-php@0.7.2"
     }
   },
   "routes": [
-    { "src": "/(auth|admin_handler|vote_handler|test_connection|logout).php", "dest": "/api/$1.php" },
+    { "src": "/(.*).php", "dest": "/$1.php" },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
